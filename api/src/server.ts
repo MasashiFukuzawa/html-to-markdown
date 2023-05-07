@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
+import puppeteer from 'puppeteer';
+
 import { JSDOM } from 'jsdom';
-import fetch from 'node-fetch';
 import TurndownService from 'turndown';
 
 const app = express();
@@ -17,14 +18,15 @@ app.get('/api', async (req: Request, res: Response) => {
     return;
   }
 
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
-    },
-    redirect: 'follow',
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
-  const html = await response.text();
+  const page = await browser.newPage();
+  await page.goto(url, { waitUntil: 'networkidle2' });
+  const html: string = await page.evaluate(() => document.body.innerHTML);
+  await browser.close();
+
   const { window } = new JSDOM(html);
   const { document } = window;
 
