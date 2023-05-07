@@ -17,3 +17,11 @@ services:
     restart: always
     volumes:
       - ./api:/src
+    deploy:
+      resources:
+        reservations:
+          cpus: 500m
+          memory: 1000Mi
+        limits:
+          cpus: 800m
+          memory: 1500Mi
