@@ -2,11 +2,11 @@ FROM node:18
 
 WORKDIR /src
 
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install
+COPY package.json yarn.lock ./
+RUN yarn install
 
 COPY . .
 
 EXPOSE 8080
 
-CMD ["pnpm", "start"]
+CMD ["yarn", "start"]
