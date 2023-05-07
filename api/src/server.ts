@@ -1,10 +1,10 @@
-const express = require('express');
+import express, { Request, Response } from 'express';
 
 const app = express();
 
 const port = 8080;
 
-app.get('/api', (req, res) => {
+app.get('/api', (req: Request, res: Response) => {
   res.json({ message: 'Hello World!' });
 });
 
