@@ -1,0 +1,14 @@
+services:
+  proxy:
+    build: reverse-proxy
+    ports:
+      - 80:80
+    depends_on:
+      - api
+    restart: always
+
+  api:
+    build: api
+    ports:
+      - 8080:8080
+    command: pnpm start
