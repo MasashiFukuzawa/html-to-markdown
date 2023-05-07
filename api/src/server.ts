@@ -45,8 +45,10 @@ app.get('/api', async (req: Request, res: Response) => {
   const turndownService = new TurndownService();
   const markdown = turndownService.turndown(body.innerHTML);
 
-  const markdownUrlRegex = /\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/g;
-  const trimmedMarkdown = markdown.replace(markdownUrlRegex, '[$1]()');
+  // We remove the contents of the parentheses
+  // because we believe that they often contain URLs, supplementary information,
+  // and other strings that are meaningless to ChatGPT.
+  const trimmedMarkdown = markdown.replace(/\([^()]*\)/g, '');
 
   res.status(200).json({ markdown: trimmedMarkdown });
 });
