@@ -1,37 +1,28 @@
+import { exec } from 'child_process';
 import express, { Request, Response } from 'express';
 import { JSDOM } from 'jsdom';
-import fetch from 'node-fetch';
 import TurndownService from 'turndown';
 
 const app = express();
-
 const port = 8080;
 
 app.use(express.json());
 
-app.get('/api', async (req: Request, res: Response) => {
-  const url = req.query.url as string | undefined;
-
-  if (!url) {
-    res.status(400).send('Missing url parameter');
-    return;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
-    },
-    redirect: 'follow',
+const curlRequest = (url: string): Promise<string> => {
+  return new Promise((resolve, _) => {
+    exec(`curl -sS -L ${url.trim()}`, (error, stdout, stderr) => {
+      if (error) {
+        throw error;
+      }
+      if (stderr) {
+        throw new Error(stderr);
+      }
+      resolve(stdout);
+    });
   });
-  const html = await response.text();
-  const { window } = new JSDOM(html);
-  const { document } = window;
+};
 
-  const body = document.body;
-
-  const tags = ['header', 'footer', 'style', 'script', 'noscript'];
-
+const removeTags = (body: HTMLElement, tags: string[]) => {
   for (const tag of tags) {
     const elements = body.getElementsByTagName(tag);
     for (let i = elements.length - 1; i >= 0; i--) {
@@ -41,14 +32,34 @@ app.get('/api', async (req: Request, res: Response) => {
       }
     }
   }
+};
+
+const removeParenthesesContents = (text: string): string => {
+  return text.replace(/\([^()]*\)/g, '');
+};
+
+app.get('/api', async (req: Request, res: Response) => {
+  const url = req.query.url as string | undefined;
+
+  if (!url) {
+    res.status(400).send('Missing url parameter');
+    return;
+  }
+
+  const html = await curlRequest(url);
+  console.log(`Result: ${html}`);
+
+  const { window } = new JSDOM(html);
+  const { document } = window;
+  const body = document.body;
+
+  const tags = ['header', 'footer', 'style', 'script', 'noscript'];
+  removeTags(body, tags);
 
   const turndownService = new TurndownService();
   const markdown = turndownService.turndown(body.innerHTML);
 
-  // We remove the contents of the parentheses
-  // because we believe that they often contain URLs, supplementary information,
-  // and other strings that are meaningless to ChatGPT.
-  const trimmedMarkdown = markdown.replace(/\([^()]*\)/g, '');
+  const trimmedMarkdown = removeParenthesesContents(markdown);
 
   res.status(200).json({ markdown: trimmedMarkdown });
 });
